@@ -13,13 +13,13 @@ ENV NO_DECOR=true
 ARG UV_VERSION=0.8.3
 ARG NODE_VERSION=20.x
 ARG DEBIAN_FRONTEND=noninteractive
-ENV PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers
 
 # Disable NPM update check
 RUN npm config set update-notifier false > /dev/null
 
 # Install playright and browser dependencies in one layer
-RUN npx playwright install --with-deps chrome && \
+RUN npx playwright install --with-deps && \
+    npx playwright install chrome && \
     npm cache clean --force && \
     chown -R 911:911 /config/.npm
 
@@ -30,6 +30,7 @@ RUN npm install -g @playwright/mcp@latest && \
 
 # Copy files
 COPY /root /
+USER 1000:1000
 
 EXPOSE 3002
-VOLUME /config
+WORKDIR /config
