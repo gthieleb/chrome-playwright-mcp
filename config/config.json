@@ -1,0 +1,19 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "userDataDir": "/config/chrome-profile",
+    "launchOptions": {
+      "channel": "chrome",
+      "headless": false
+    }
+  },
+  "server": {
+    "port": 3002,
+    "host": "0.0.0.0",
+    "allowedHosts": ["*"]
+  },
+  "sharedBrowserContext": true,
+  "capabilities": ["pdf", "vision"],
+  "outputDir": "/config/output",
+  "imageResponses": "allow"
+}
