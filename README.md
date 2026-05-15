@@ -65,12 +65,32 @@ For most MCP clients, add this configuration to connect to the containerized ser
 
 ## Configuration
 
-The MCP server configuration is located at `/config/config.json`:
+The MCP server configuration is located at `/config/config.json` and controls all MCP server settings:
 
 - **Port**: 3002
 - **Browser**: Chrome (non-headless)
 - **Capabilities**: PDF and vision support
 - **Output Directory**: `/config/output`
+
+## Volumes
+
+The container uses Docker named volumes for persistent data:
+
+| Volume | Mount | Purpose |
+|--------|-------|---------|
+| `chrome-mcp-dev-profile` | `/config/chrome-profile` | Chrome browser profile (cookies, sessions, logins) |
+| `chrome-mcp-dev-output` | `/config/output` | Automation artifacts, screenshots, PDFs, logs |
+
+> **Warning**: Running `docker compose down -v` will **permanently destroy** these volumes and all stored data. Use `docker compose down` (without `-v`) to stop the container while preserving data.
+
+### Migrating from bind mounts
+
+If you previously used bind mounts (`./config/chrome-profile`), copy your data into the named volume:
+
+```bash
+docker compose up -d
+docker cp ./config/chrome-profile/. chrome-mcp-dev:/config/chrome-profile/
+```
 
 ## Architecture
 
@@ -92,6 +112,19 @@ Pre-built container images are available at:
 - **Registry**: `ghcr.io/bradsjm/chrome-mcp`
 - **Supported Architecture**: linux/amd64 (x86_64 only - Chrome requirement)
 - **Tags**: `latest`, `main`, version tags
+
+## Advanced: Playwright Extension Mode (Future)
+
+The Playwright MCP server supports an `extension` mode that allows controlling an already-running Chrome browser via the [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) Chrome add-on (`mmlmfjhmonkocbjadbfplnigmagldckm`).
+
+**Potential benefit**: Control the VNC-visible Chrome directly, enabling better integration with manual browsing sessions and persistent login state.
+
+**Current limitations**:
+- Timeout issues during extension connection (timeout is controlled by the MCP client, not the server)
+- Requires architecture changes: MCP server cannot start before Chrome is running
+- Startup ordering between Chrome and MCP service needs coordination
+
+This feature is tracked in [GitHub Issues](../../issues) — search for "Playwright Extension" for the analysis issue.
 
 ## License
 
