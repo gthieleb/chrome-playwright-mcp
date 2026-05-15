@@ -1,0 +1,27 @@
+services:
+  chrome-mcp:
+    image: chrome-mcp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chrome-mcp-dev
+    restart: unless-stopped
+    ports:
+      - "14000:3000"
+      - "14001:3001"
+      - "14002:3002"
+    volumes:
+      # Named volumes for persistence — data survives container restarts
+      # WARNING: 'docker compose down -v' will DESTROY these volumes and all data
+      # Migration from bind mounts: copy ./config/chrome-profile/* into the named volume
+      - chrome-mcp-dev-profile:/config/chrome-profile
+      - chrome-mcp-dev-output:/config/output
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+    shm_size: "2gb"
+
+volumes:
+  chrome-mcp-dev-profile:
+  chrome-mcp-dev-output:
