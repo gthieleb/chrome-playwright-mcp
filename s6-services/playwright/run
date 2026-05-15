@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+
+exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/playwright-mcp \
+  --config /config/config.json \
+  >> /config/output/playwright-mcp.log 2>&1
