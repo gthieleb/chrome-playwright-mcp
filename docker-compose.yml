@@ -1,0 +1,25 @@
+services:
+  chrome-mcp:
+    image: chrome-mcp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chrome-mcp
+    restart: unless-stopped
+    # Optional bind-mount setup (kept as reference; disabled by default).
+    # If you enable an overlay with named volumes, this block is typically
+    # not needed because compose list fields (like volumes) are overridden.
+    # volumes:
+    #   - ./config/chrome-profile:/config/chrome-profile
+    #   - ./config/output:/config/output
+
+    # Optional base port mapping (disabled; prefer overlay for active mapping).
+    # ports:
+    #   - "127.0.0.1:13000:3000"
+    #   - "127.0.0.1:13001:3001"
+    #   - "127.0.0.1:13002:3002"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+    shm_size: "2gb"
