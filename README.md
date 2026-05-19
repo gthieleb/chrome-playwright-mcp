@@ -102,6 +102,41 @@ The MCP server configuration is located at `/config/config.json`:
 - **MCP Server**: `@playwright/mcp@latest`
 - **Browser**: Chrome with Playwright
 
+## Process Overview
+
+When the container is running, you should see the following processes:
+
+### Core Services
+
+- **s6-supervise playwright** (root): s6 service supervisor managing the Playwright MCP service
+- **playwright-mcp** (abc/user): The Playwright MCP server listening on port 3002
+- **Xvnc** (abc/user): KasmVNC server providing the web-based desktop
+
+### Chrome Browser (when active)
+
+When a browser session is initialized through the MCP server, Chrome processes appear:
+
+- **chrome** (abc/user): Main Chrome browser process with `--user-data-dir=/config/chrome-profile`
+- **chrome --type=gpu-process**: GPU rendering process
+- **chrome --type=renderer**: Page rendering processes (one per tab)
+- **chrome --type=zygote**: Process spawner
+- **chrome_crashpad_handler**: Crash reporting handler
+
+### Checking Process State
+
+```bash
+# List all Chrome and Playwright processes
+docker exec chrome-mcp ps aux | grep -E "chrome|playwright"
+
+# Check if MCP server is responding
+curl -s http://localhost:3002/sse
+
+# View Playwright MCP logs
+docker exec chrome-mcp cat /config/output/playwright-mcp.log
+```
+
+> **Note**: Chrome only appears in the process list after the first browser automation call through the MCP server. The browser persists across calls when using `sharedBrowserContext: true` in the config.
+
 ## Development
 
 The container includes:
