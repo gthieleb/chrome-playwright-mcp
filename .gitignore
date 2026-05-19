@@ -3,7 +3,7 @@ output/
 root/config/output/
 
 # Docker compose local override (keep local, not committed)
-docker-compose.yml
+docker-compose.override.yml
 
 # Docker build cache
 .dockerignore
