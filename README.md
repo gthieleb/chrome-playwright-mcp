@@ -54,6 +54,30 @@ docker build -t chrome-mcp .
 3. Use browser automation through your preferred MCP client
 4. Outputs are saved to the mounted output directory
 
+### Docker Compose Override (recommended for local setup)
+
+This repo keeps `docker-compose.yml` as the base file and provides
+`docker-compose.override.example.yml` as a local template.
+
+1. Copy the example:
+
+```bash
+cp docker-compose.override.example.yml docker-compose.override.yml
+```
+
+2. Adjust ports/volumes as needed locally.
+
+3. Start normally:
+
+```bash
+docker compose up -d
+```
+
+Docker Compose automatically loads `docker-compose.override.yml` when present.
+
+> `docker-compose.override.yml` is gitignored, so local machine-specific changes
+> (ports, volume choice, host bindings) are not committed.
+
 ### MCP Server
 
 The Playwright MCP server is available at `http://localhost:3002` and automatically starts when the container launches. It supports both SSE and streaming HTTP protocols.
