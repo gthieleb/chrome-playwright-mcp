@@ -1,0 +1,9 @@
+#!/usr/bin/with-contenv bash
+
+mkdir -p /config/chrome-profile /config/output
+chown -R abc:abc /config/chrome-profile /config/output
+chmod -R u+rwX /config/chrome-profile /config/output
+
+exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/playwright-mcp \
+  --config /config/config.json \
+  >> /config/output/playwright-mcp.log 2>&1
