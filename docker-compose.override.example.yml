@@ -1,0 +1,21 @@
+services:
+  chrome-mcp:
+    # Optional local name override
+    container_name: chrome-mcp-dev
+
+    # Example localhost bindings (no external/Tailscale IP)
+    ports:
+      - "127.0.0.1:14000:3000"
+      - "127.0.0.1:14001:3001"
+      - "127.0.0.1:14002:3002"
+
+    # Named volumes (persistent browser profile + artifacts)
+    # If you prefer bind mounts, disable this block and uncomment bind mounts
+    # in docker-compose.yml instead.
+    volumes:
+      - chrome-mcp-dev-profile:/config/chrome-profile
+      - chrome-mcp-dev-output:/config/output
+
+volumes:
+  chrome-mcp-dev-profile:
+  chrome-mcp-dev-output:
