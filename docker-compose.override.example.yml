@@ -9,6 +9,11 @@ services:
       - "127.0.0.1:14001:3001"
       - "127.0.0.1:14002:3002"
 
+    environment:
+      - PLAYWRIGHT_IMPLEMENTATION=playwright
+      # Switch to the plus build by changing the line above to:
+      # - PLAYWRIGHT_IMPLEMENTATION=playwright-plus
+
     # Named volumes (persistent browser profile + artifacts)
     # If you prefer bind mounts, disable this block and uncomment bind mounts
     # in docker-compose.yml instead.

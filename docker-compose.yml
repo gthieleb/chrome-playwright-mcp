@@ -24,4 +24,9 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Berlin
+      # MCP implementation selector.
+      # Valid values: "playwright" (default, official @playwright/mcp),
+      #               "playwright-plus" (@ai-coding-labs/playwright-mcp-plus).
+      # Only one implementation runs at a time on port 3002.
+      - PLAYWRIGHT_IMPLEMENTATION=playwright
     shm_size: "2gb"

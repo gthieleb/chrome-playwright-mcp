@@ -1,9 +1,42 @@
 #!/usr/bin/with-contenv bash
 
-mkdir -p /config/chrome-profile /config/output
-chown -R abc:abc /config/chrome-profile /config/output
-chmod -R u+rwX /config/chrome-profile /config/output
+# === Playwright MCP unified runner ===
+# Selects official or plus implementation based on PLAYWRIGHT_IMPLEMENTATION.
+# Normalised: trimmed whitespace, lowercased. Unset/empty defaults to "playwright".
 
-exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/playwright-mcp \
-  --config /config/config.json \
-  >> /config/output/playwright-mcp.log 2>&1
+impl="${PLAYWRIGHT_IMPLEMENTATION:-playwright}"
+# Trim leading whitespace
+impl="${impl#"${impl%%[![:space:]]*}"}"
+# Trim trailing whitespace
+impl="${impl%"${impl##*[![:space:]]}"}"
+# Lowercase
+impl="${impl,,}"
+# Final fallback if empty after trimming
+if [[ -z "$impl" ]]; then
+  impl="playwright"
+fi
+
+# Create runtime directories (/config is a runtime volume from base image)
+mkdir -p /config/chrome-profile /config/chrome-profile-plus /config/output
+chown -R abc:abc /config/chrome-profile /config/chrome-profile-plus /config/output
+chmod -R u+rwX /config/chrome-profile /config/chrome-profile-plus /config/output
+
+case "$impl" in
+  playwright)
+    echo "Starting Playwright MCP (official) — PLAYWRIGHT_IMPLEMENTATION=${impl}"
+    exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/playwright-mcp \
+      --config /config/config.json \
+      >> /config/output/playwright-mcp.log 2>&1
+    ;;
+  playwright-plus)
+    echo "Starting Playwright MCP Plus — PLAYWRIGHT_IMPLEMENTATION=${impl}"
+    exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/mcp-server-playwright \
+      --config /config/config-plus.json \
+      >> /config/output/playwright-mcp.log 2>&1
+    ;;
+  *)
+    echo "Invalid PLAYWRIGHT_IMPLEMENTATION: '${impl}'" >&2
+    echo "Valid values: playwright, playwright-plus" >&2
+    exit 1
+    ;;
+esac

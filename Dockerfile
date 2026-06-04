@@ -9,7 +9,7 @@ ENV TITLE=Playwright
 ENV START_DOCKER=false
 ENV NO_DECOR=true
 
-RUN mkdir -p /config/chrome-profile /config/output && \
+RUN mkdir -p /config/chrome-profile /config/output /config/chrome-profile-plus && \
     chown -R 1000:1000 /config
 
 # Use ARGs for versions to make updates easy and explicit
@@ -26,13 +26,14 @@ RUN npx playwright install --with-deps && \
     npm cache clean --force
 
 # Install MCP support
-RUN npm install -g @playwright/mcp@latest && \
+RUN npm install -g @playwright/mcp@latest @ai-coding-labs/playwright-mcp-plus@latest && \
     npm cache clean --force
 
 RUN chown -R 1000:1000 /config
 
 # Copy files
 COPY --chown=1000:1000 config/config.json /config/config.json
+COPY --chown=1000:1000 config/config-plus.json /config/config-plus.json
 COPY --chown=0:0 s6-services /etc/services.d
 RUN chmod +x /etc/services.d/playwright/run
 RUN chown -R 1000:1000 /config

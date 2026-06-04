@@ -87,6 +87,50 @@ For most MCP clients, add this configuration to connect to the containerized ser
 - SSE: `http://localhost:3002/sse`
 - Streaming HTTP: `http://localhost:3002/mcp`
 
+## Playwright Implementation Selection
+
+The container supports two MCP implementations, selectable via the `PLAYWRIGHT_IMPLEMENTATION` environment variable. Only one implementation runs at a time on port 3002.
+
+| Value | Package | Description |
+|---|---|---|
+| `playwright` (default) | `@playwright/mcp` | Official Playwright MCP server |
+| `playwright-plus` | `@ai-coding-labs/playwright-mcp-plus` | Extended MCP with additional upstream features |
+
+Switching implementations requires a container restart or recreate.
+
+### Docker Run Examples
+
+Default (official):
+```bash
+docker run -d \
+  --name chrome-mcp \
+  -p 3000:3000 -p 3001:3001 -p 3002:3002 \
+  -v $(pwd)/config:/config \
+  ghcr.io/bradsjm/chrome-mcp:latest
+```
+
+Playwright Plus:
+```bash
+docker run -d \
+  --name chrome-mcp \
+  -e PLAYWRIGHT_IMPLEMENTATION=playwright-plus \
+  -p 3000:3000 -p 3001:3001 -p 3002:3002 \
+  -v $(pwd)/config:/config \
+  ghcr.io/bradsjm/chrome-mcp:latest
+```
+
+### Docker Compose
+
+Set in `docker-compose.override.yml`:
+```yaml
+services:
+  chrome-mcp:
+    environment:
+      - PLAYWRIGHT_IMPLEMENTATION=playwright-plus
+```
+
+Each implementation uses its own Chrome profile directory (`/config/chrome-profile` for official, `/config/chrome-profile-plus` for plus) and its own config file (`/config/config.json` or `/config/config-plus.json`).
+
 ## Configuration
 
 The MCP server configuration is located at `/config/config.json`:
