@@ -131,6 +131,129 @@ services:
 
 Each implementation uses its own Chrome profile directory (`/config/chrome-profile` for official, `/config/chrome-profile-plus` for plus) and its own config file (`/config/config.json` or `/config/config-plus.json`).
 
+## Session Management
+
+The Playwright Plus implementation includes a **project isolation** feature that maintains separate, isolated browser profiles for different automation contexts. This enables concurrent, non-interfering browser sessions within a single container.
+
+### How It Works
+
+Project isolation (`--project-isolation`) creates a dedicated browser profile directory per session. Each session gets its own cookies, local storage, and browser state — completely isolated from other sessions.
+
+The feature is configured through three CLI flags passed to the Plus MCP server:
+
+| Flag | Value | Purpose |
+|---|---|---|
+| `--project-isolation` | *(flag only)* | Enables project-based isolation |
+| `--project-isolation-session-strategy` | `custom` | Uses the explicit `projectPath` parameter from tool calls |
+| `--project-isolation-session-root-dir` | `/sessions` | Base directory for all session profiles |
+
+Every `browser_*` tool call supports two extra parameters:
+
+- **`projectDrive: "/"`** — The root path for the project (typically `/`).
+- **`projectPath: "/sessions/<name>"`** — The session's profile directory. Each unique path creates an independent browser context.
+
+**Session naming convention:** `/sessions/<name>` where `<name>` is a logical session identifier such as `recherche`, `testing`, or `admin`.
+
+The following table compares behaviour with and without project isolation:
+
+| Aspect | Without `projectIsolation` | With `projectIsolation` |
+|---|---|---|
+| Cookie / storage isolation | Single profile shared by all calls | Each `projectPath` has its own profile |
+| Concurrent sessions | Not possible (single browser context) | Yes — parallel calls to different paths work independently |
+| Session persistence | Profile directory persists (or not) based on `--user-data-dir` | Each session profile persists independently under `/sessions` |
+| Configuration mechanism | `--user-data-dir` (one fixed path) | `projectPath` per call (dynamic, per-session) |
+| Cleanup | Manual profile deletion | Manual per-session profile deletion |
+
+### Setup
+
+To enable session management:
+
+1. **Select the Plus implementation** by setting `PLAYWRIGHT_IMPLEMENTATION=playwright-plus`.
+2. **Volume-mount `/sessions` for persistence** (recommended — see below).
+
+Session management is a **Playwright Plus-only** feature. The official `@playwright/mcp` does not support `--project-isolation` or the `projectPath`/`projectDrive` parameters.
+
+#### Pre-configured Sessions
+
+The container image includes three pre-created session directories, ready to use:
+
+- `/sessions/recherche`
+- `/sessions/testing`
+- `/sessions/admin`
+
+Additional sessions are created on demand: any `projectPath` under `/sessions` is automatically initialised on first use. You can also pre-create directories manually:
+
+```bash
+docker exec chrome-mcp mkdir -p /sessions/my-custom-session
+```
+
+#### Persistence
+
+`/sessions` is part of the container image and is **ephemeral by default**. Session profiles are lost when the container is rebuilt or recreated. To persist sessions across restarts:
+
+**Docker run (bind mount):**
+```bash
+docker run -d \
+  --name chrome-mcp \
+  -e PLAYWRIGHT_IMPLEMENTATION=playwright-plus \
+  -v $(pwd)/sessions:/sessions \
+  ghcr.io/bradsjm/chrome-mcp:latest
+```
+
+**Docker Compose (named volume):**
+```yaml
+services:
+  chrome-mcp:
+    environment:
+      - PLAYWRIGHT_IMPLEMENTATION=playwright-plus
+    volumes:
+      - sessions_data:/sessions
+
+volumes:
+  sessions_data:
+```
+
+#### Session Cleanup
+
+There is **no automatic session cleanup**. Old or unused session profiles accumulate in `/sessions` and must be removed manually:
+
+```bash
+docker exec chrome-mcp rm -rf /sessions/unused-session
+```
+
+### Differences Between Implementations
+
+| Capability | Official MCP (`@playwright/mcp`) | Playwright Plus (`@ai-coding-labs/playwright-mcp-plus`) |
+|---|---|---|
+| `--isolated` (in-memory context) | ✅ Yes | ✅ Yes |
+| `--user-data-dir` (fixed profile) | ✅ Yes | ✅ Yes |
+| `--project-isolation` | ❌ Not available | ✅ Yes |
+| `projectPath` / `projectDrive` per tool call | ❌ Not available | ✅ Yes |
+| Multiple concurrent isolated sessions | ❌ Single profile only | ✅ Yes, one per `projectPath` |
+| Custom session root directory | ❌ Not available | ✅ Yes (`--project-isolation-session-root-dir`) |
+
+For session management — multiple concurrent, persistent, isolated browser profiles — **Playwright Plus is required**.
+
+### Challenges and Limitations
+
+1. **Project-based, not client-based isolation.** `projectIsolation` isolates by `projectPath`, not by MCP client identity. Two different MCP clients (e.g. Freelancer A and Freelancer B) calling the same `projectPath` will share the same profile.
+
+2. **Every tool call must include `projectPath`.** If a `browser_*` tool is called without a `projectPath`, it falls back to the default context without isolation. This is easy to forget and can lead to unintentional state sharing.
+
+3. **No automatic session cleanup.** Profiles accumulate indefinitely. Manual deletion (`docker exec ... rm -rf /sessions/old-session`) is required.
+
+4. **Persistence requires a volume mount.** Without an explicit `-v` or named volume, session data is lost on container rebuild.
+
+5. **`projectIsolation` is a CLI flag, not a JSON config option.** It must be set via `--project-isolation` on the command line. It cannot be enabled or configured in `config-plus.json`.
+
+6. **MCP protocol direction.** The MCP 2026-07-28 release candidate moves towards a **stateless** protocol, removing `Mcp-Session-Id`. This is tracked in:
+   - **SEP-2567** — Sessionless MCP
+   - **SEP-2575** — Stateless MCP
+
+   These proposals shift session management from the protocol layer to the server side. The current `projectIsolation` setup is a practical solution today, but it is not a long-term protocol-level answer.
+
+7. **Docker MCP Gateway and LiteLLM MCP Proxy** solve **routing** (which backend handles a request), not **session assignment** (which session profile to use). Multi-client isolation within a single container requires a custom session orchestration layer beyond what these gateways provide.
+
 ## Configuration
 
 The MCP server configuration is located at `/config/config.json`:

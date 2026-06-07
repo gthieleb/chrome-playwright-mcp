@@ -9,8 +9,8 @@ ENV TITLE=Playwright
 ENV START_DOCKER=false
 ENV NO_DECOR=true
 
-RUN mkdir -p /config/chrome-profile /config/output /config/chrome-profile-plus && \
-    chown -R 1000:1000 /config
+RUN mkdir -p /config/chrome-profile /config/output /config/chrome-profile-plus /sessions/recherche /sessions/testing /sessions/admin && \
+    chown -R 1000:1000 /config /sessions
 
 # Use ARGs for versions to make updates easy and explicit
 ARG UV_VERSION=0.8.3

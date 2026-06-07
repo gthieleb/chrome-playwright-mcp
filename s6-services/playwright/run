@@ -17,9 +17,9 @@ if [[ -z "$impl" ]]; then
 fi
 
 # Create runtime directories (/config is a runtime volume from base image)
-mkdir -p /config/chrome-profile /config/chrome-profile-plus /config/output
-chown -R abc:abc /config/chrome-profile /config/chrome-profile-plus /config/output
-chmod -R u+rwX /config/chrome-profile /config/chrome-profile-plus /config/output
+mkdir -p /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
+chown -R abc:abc /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
+chmod -R u+rwX /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
 
 case "$impl" in
   playwright)
@@ -32,6 +32,9 @@ case "$impl" in
     echo "Starting Playwright MCP Plus — PLAYWRIGHT_IMPLEMENTATION=${impl}"
     exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/mcp-server-playwright \
       --config /config/config-plus.json \
+      --project-isolation \
+      --project-isolation-session-strategy=custom \
+      --project-isolation-session-root-dir /sessions \
       >> /config/output/playwright-mcp.log 2>&1
     ;;
   *)
