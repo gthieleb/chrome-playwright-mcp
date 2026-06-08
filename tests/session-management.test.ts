@@ -20,11 +20,10 @@ function extractCaseBlock(script: string, branchName: string) {
 }
 
 describe("session management config", () => {
-  it("config-plus.json keeps browser.userDataDir on the plus profile", () => {
+  it("config-plus.json omits browser.userDataDir for projectIsolation", () => {
     const parsed = JSON.parse(plusConfigRaw);
 
-    expect(parsed.browser.userDataDir).toBe("/config/chrome-profile-plus");
-    expect(parsed.browser.userDataDir).not.toBe("/sessions");
+    expect(parsed.browser).not.toHaveProperty("userDataDir");
   });
 
   it("config-plus.json does not declare projectIsolation", () => {

@@ -129,7 +129,7 @@ services:
       - PLAYWRIGHT_IMPLEMENTATION=playwright-plus
 ```
 
-Each implementation uses its own Chrome profile directory (`/config/chrome-profile` for official, `/config/chrome-profile-plus` for plus) and its own config file (`/config/config.json` or `/config/config-plus.json`).
+The official implementation uses `/config/chrome-profile` with its config at `/config/config.json`. Playwright Plus uses dynamically-generated profile directories under `/sessions` (managed by projectIsolation) with config at `/config/config-plus.json`.
 
 ## Session Management
 
@@ -146,6 +146,12 @@ The feature is configured through three CLI flags passed to the Plus MCP server:
 | `--project-isolation` | *(flag only)* | Enables project-based isolation |
 | `--project-isolation-session-strategy` | `custom` | Uses the explicit `projectPath` parameter from tool calls |
 | `--project-isolation-session-root-dir` | `/sessions` | Base directory for all session profiles |
+
+> ⚠️ **WARNING: `userDataDir` blocks projectIsolation**
+>
+> If `config-plus.json` contains a `browser.userDataDir` property, Playwright Plus will use that fixed directory for **all** sessions, completely bypassing projectIsolation. The property **must be absent** (not just empty) for session isolation to work.
+>
+> If you mount a custom `config-plus.json`, ensure `browser.userDataDir` is not set.
 
 Every `browser_*` tool call supports two extra parameters:
 
@@ -254,6 +260,8 @@ For session management — multiple concurrent, persistent, isolated browser pro
 
 7. **Docker MCP Gateway and LiteLLM MCP Proxy** solve **routing** (which backend handles a request), not **session assignment** (which session profile to use). Multi-client isolation within a single container requires a custom session orchestration layer beyond what these gateways provide.
 
+8. **`userDataDir` config conflict.** If `browser.userDataDir` is set in `config-plus.json`, projectIsolation is silently bypassed — all sessions share one profile. The fix is to remove the property entirely. This is a discovered runtime behavior, not documented in the upstream package.
+
 ## Configuration
 
 The MCP server configuration is located at `/config/config.json`:
@@ -283,7 +291,9 @@ When the container is running, you should see the following processes:
 
 When a browser session is initialized through the MCP server, Chrome processes appear:
 
-- **chrome** (abc/user): Main Chrome browser process with `--user-data-dir=/config/chrome-profile`
+- **chrome** (abc/user): Main Chrome browser process
+  - Official: `--user-data-dir=/config/chrome-profile`
+  - Plus with projectIsolation: `--user-data-dir=/sessions/ms-playwright/mcp-chrome-profile/playwright-plus-mcp/<name>-<hash>` (dynamically generated per session)
 - **chrome --type=gpu-process**: GPU rendering process
 - **chrome --type=renderer**: Page rendering processes (one per tab)
 - **chrome --type=zygote**: Process spawner

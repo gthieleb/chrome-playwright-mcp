@@ -106,11 +106,11 @@ describe("MCP Selection - config file validation", () => {
     expect(parsed.server.host).toBe("127.0.0.1");
   });
 
-  it("config-plus.json references chrome-profile-plus", () => {
+  it("config-plus.json omits chrome-profile-plus for projectIsolation", () => {
     const raw = readFileSync(resolve(projectRoot, "config", "config-plus.json"), "utf-8");
-    expect(raw).toContain("chrome-profile-plus");
+    expect(raw).not.toContain("chrome-profile-plus");
     const parsed = JSON.parse(raw);
-    expect(parsed.browser.userDataDir).toBe("/config/chrome-profile-plus");
+    expect(parsed.browser).not.toHaveProperty("userDataDir");
   });
 
   it("config-plus.json has no projectIsolation", () => {
