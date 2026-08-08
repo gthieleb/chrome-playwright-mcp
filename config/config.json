@@ -9,7 +9,7 @@
     "sharedBrowserContext": true,
     "server": {
         "port": 3002,
-        "host": "127.0.0.1"
+        "host": "0.0.0.0"
     },
     "capabilities": ["pdf", "vision"],
     "outputDir": "/config/output",

@@ -18,6 +18,12 @@ fi
 
 # Create runtime directories (/config is a runtime volume from base image)
 mkdir -p /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
+
+# Copy default configs (base image /config is a volume, so image-built files are hidden)
+# Use -n to preserve user config on PVC across restarts
+cp -n /defaults/config.json /config/config.json
+cp -n /defaults/config-plus.json /config/config-plus.json
+
 chown -R abc:abc /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
 chmod -R u+rwX /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
 

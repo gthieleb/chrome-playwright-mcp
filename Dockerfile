@@ -31,13 +31,19 @@ RUN npm install -g @playwright/mcp@latest @ai-coding-labs/playwright-mcp-plus@la
 
 RUN chown -R 1000:1000 /config
 
-# Copy files
-COPY --chown=1000:1000 config/config.json /config/config.json
-COPY --chown=1000:1000 config/config-plus.json /config/config-plus.json
-COPY --chown=0:0 s6-services /etc/services.d
-RUN chmod +x /etc/services.d/playwright/run
+# Copy config files to /defaults (linuxserver convention) since /config is a volume
+COPY --chown=1000:1000 config/config.json /defaults/config.json
+COPY --chown=1000:1000 config/config-plus.json /defaults/config-plus.json
+
+# Install s6 service for s6-overlay v3
+COPY --chown=0:0 s6-services/playwright/run /etc/s6-overlay/s6-rc.d/svc-playwright/run
+RUN chmod +x /etc/s6-overlay/s6-rc.d/svc-playwright/run && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/svc-playwright/type && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/svc-playwright/dependencies.d && \
+    touch /etc/s6-overlay/s6-rc.d/svc-playwright/dependencies.d/init-services && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/svc-playwright
+
 RUN chown -R 1000:1000 /config
-USER 1000:1000
 
 EXPOSE 3002
 WORKDIR /config
