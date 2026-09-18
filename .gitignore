@@ -5,8 +5,6 @@ root/config/output/
 # Docker compose local override (keep local, not committed)
 docker-compose.override.yml
 
-# Docker build cache
-.dockerignore
 
 # IDE files
 .vscode/
