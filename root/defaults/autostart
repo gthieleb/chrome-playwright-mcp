@@ -1,2 +1,4 @@
-xsetroot -solid blue
-npx -y @playwright/mcp --config /config/config.json
+xsetroot -solid #1f2933
+# Chrome on the desktop for manual logins (KasmVNC); MCP browser sessions run
+# separately on demand via the MCP server.
+(sleep 5; DISPLAY=${DISPLAY:-:1} HOME=/home/kasm-user setsid /usr/bin/google-chrome --user-data-dir=/config/chrome-profile --no-first-run --start-maximized >/dev/null 2>&1) &

@@ -1,0 +1,16 @@
+config/chrome-profile
+config/output
+config/.npm
+root/config
+root/defaults/README.md
+.git
+.github
+.gitignore
+.sisyphus
+.deepagents
+drafts
+freelancer-tasks.md
+SESSION_TABS.md
+docker-compose*.yml
+*.md
+LICENSE

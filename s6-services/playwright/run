@@ -1,51 +1,34 @@
 #!/usr/bin/with-contenv bash
 
-# === Playwright MCP unified runner ===
-# Selects official or plus implementation based on PLAYWRIGHT_IMPLEMENTATION.
-# Normalised: trimmed whitespace, lowercased. Unset/empty defaults to "playwright".
-
-impl="${PLAYWRIGHT_IMPLEMENTATION:-playwright}"
-# Trim leading whitespace
-impl="${impl#"${impl%%[![:space:]]*}"}"
-# Trim trailing whitespace
-impl="${impl%"${impl##*[![:space:]]}"}"
-# Lowercase
-impl="${impl,,}"
-# Final fallback if empty after trimming
-if [[ -z "$impl" ]]; then
-  impl="playwright"
-fi
+# === Playwright MCP runner (stock @playwright/mcp) ===
+# Runs the official implementation only; selector env is obsolete.
+# Kept for compatibility: PLAYWRIGHT_IMPLEMENTATION is ignored.
 
 # Create runtime directories (/config is a runtime volume from base image)
-mkdir -p /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
+mkdir -p /config/chrome-profile /config/output
 
-# Copy default configs (base image /config is a volume, so image-built files are hidden)
+# Copy default config (base image /config is a volume, so image-built files are hidden)
 # Use -n to preserve user config on PVC across restarts
 cp -n /defaults/config.json /config/config.json
-cp -n /defaults/config-plus.json /config/config-plus.json
 
-chown -R abc:abc /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
-chmod -R u+rwX /config/chrome-profile /config/chrome-profile-plus /config/output /sessions
+# Openbox autostart + menu are image code, not user state: force-sync them so
+# desktop fixes (e.g. Chrome autostart) reach existing PVCs on every boot.
+# init-kasmvnc-config only copies when missing, which would pin old versions.
+mkdir -p /config/.config/openbox
+install -m 0644 -o abc -g abc /defaults/autostart /config/.config/openbox/autostart
+install -m 0644 -o abc -g abc /defaults/menu.xml /config/.config/openbox/menu.xml
 
-case "$impl" in
-  playwright)
-    echo "Starting Playwright MCP (official) — PLAYWRIGHT_IMPLEMENTATION=${impl}"
-    exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/playwright-mcp \
-      --config /config/config.json \
-      >> /config/output/playwright-mcp.log 2>&1
-    ;;
-  playwright-plus)
-    echo "Starting Playwright MCP Plus — PLAYWRIGHT_IMPLEMENTATION=${impl}"
-    exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/mcp-server-playwright \
-      --config /config/config-plus.json \
-      --project-isolation \
-      --project-isolation-session-strategy=custom \
-      --project-isolation-session-root-dir /sessions \
-      >> /config/output/playwright-mcp.log 2>&1
-    ;;
-  *)
-    echo "Invalid PLAYWRIGHT_IMPLEMENTATION: '${impl}'" >&2
-    echo "Valid values: playwright, playwright-plus" >&2
-    exit 1
-    ;;
-esac
+chown -R abc:abc /config/chrome-profile /config/output
+chmod -R u+rwX /config/chrome-profile /config/output
+
+echo "Starting Playwright MCP (official @playwright/mcp)"
+
+# Allow-list note: stock 0.0.81+ rejects requests whose Host header differs from
+# the bind address ("Access is only allowed at localhost"). This container is only
+# reachable via Tailscale service ingress, so the check is disabled deliberately.
+exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/playwright-mcp \
+  --config /config/config.json \
+  --output-dir /config/output \
+  --idle-timeout 3600000 \
+  --allowed-hosts '*' \
+  >> /config/output/playwright-mcp.log 2>&1
