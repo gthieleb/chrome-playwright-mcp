@@ -16,8 +16,12 @@ if [ ! -f "$PREFS" ]; then
 fi
 
 # Copy default config (base image /config is a volume, so image-built files are hidden)
-# Use -n to preserve user config on PVC across restarts
-cp -n /defaults/config.json /config/config.json
+# Force-sync: config ships container wiring (CDP port for session-tools,
+# persistent profile dir) that older PVCs lack. Backup existing user config once.
+if [ -f /config/config.json ]; then
+  cp /config/config.json /config/config.json.user.bak
+fi
+install -m 0644 -o abc -g abc /defaults/config.json /config/config.json
 
 # Openbox autostart + menu are image code, not user state: force-sync them so
 # desktop fixes (e.g. Chrome autostart) reach existing PVCs on every boot.
