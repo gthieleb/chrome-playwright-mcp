@@ -9,7 +9,7 @@ ENV TITLE=Playwright
 ENV START_DOCKER=false
 ENV NO_DECOR=true
 
-RUN mkdir -p /config/chrome-profile /config/output && \
+RUN mkdir -p /config/chrome-profile /config/mcp-profile /config/output /config/sessions && \
     chown -R 1000:1000 /config
 
 # Use ARGs for versions to make updates easy and explicit
@@ -54,11 +54,16 @@ COPY --chown=1000:1000 root/defaults/menu.xml /defaults/menu.xml
 
 # Install s6 service for s6-overlay v3
 COPY --chown=0:0 s6-services/playwright/run /etc/s6-overlay/s6-rc.d/svc-playwright/run
-RUN chmod +x /etc/s6-overlay/s6-rc.d/svc-playwright/run && \
+COPY --chown=1000:1000 s6-services/session-tools/server.js /opt/session-tools/server.js
+COPY --chown=0:0 s6-services/session-tools/run /etc/s6-overlay/s6-rc.d/svc-session-tools/run
+RUN chmod +x /etc/s6-overlay/s6-rc.d/svc-playwright/run /etc/s6-overlay/s6-rc.d/svc-session-tools/run && \
     echo "longrun" > /etc/s6-overlay/s6-rc.d/svc-playwright/type && \
-    mkdir -p /etc/s6-overlay/s6-rc.d/svc-playwright/dependencies.d && \
+    echo "longrun" > /etc/s6-overlay/s6-rc.d/svc-session-tools/type && \
+    mkdir -p /etc/s6-overlay/s6-rc.d/svc-playwright/dependencies.d /etc/s6-overlay/s6-rc.d/svc-session-tools/dependencies.d && \
     touch /etc/s6-overlay/s6-rc.d/svc-playwright/dependencies.d/init-services && \
-    touch /etc/s6-overlay/s6-rc.d/user/contents.d/svc-playwright
+    touch /etc/s6-overlay/s6-rc.d/svc-session-tools/dependencies.d/init-services && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/svc-playwright && \
+    touch /etc/s6-overlay/s6-rc.d/user/contents.d/svc-session-tools
 
 RUN chown -R 1000:1000 /config
 

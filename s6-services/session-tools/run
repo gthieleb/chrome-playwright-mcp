@@ -1,0 +1,11 @@
+#!/usr/bin/with-contenv bash
+
+# === chrome-session-tools sidecar (MCP on :3003) ===
+# Provides tabs_list/tabs_save/tabs_restore + bookmarks_list against the
+# running Chrome via CDP (127.0.0.1:9222) and the profile Bookmarks file.
+
+echo "Starting chrome-session-tools (port 3003)"
+
+exec s6-setuidgid abc env HOME=/home/kasm-user \
+  node /opt/session-tools/server.js \
+  >> /config/output/session-tools.log 2>&1

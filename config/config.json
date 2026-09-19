@@ -1,12 +1,15 @@
 {
     "browser": {
         "isolated": false,
+        "userDataDir": "/config/mcp-profile",
         "launchOptions": {
-            "headless": false
+            "headless": false,
+            "args": [
+                "--remote-debugging-port=9222"
+            ]
         },
         "contextOptions": {}
     },
-    "sharedBrowserContext": true,
     "server": {
         "port": 3002,
         "host": "0.0.0.0"
