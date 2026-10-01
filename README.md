@@ -93,12 +93,46 @@ This container runs the **official** `@playwright/mcp` server (pinned version vi
 
 Isolation model with stock MCP: each HTTP/SSE client session gets its own isolated browser context natively (`browser.isolated: true` in `config.json`). There is no `--project-isolation` flag and no per-tool-call `projectPath`/`projectDrive` parameters — per-client isolation is handled by the MCP server per HTTP session.
 
+> This container does **not** run in that isolated mode. See [Browser Session Model](#browser-session-model) for the shared persistent-profile model used here.
+
+## Browser Session Model
+
+The container runs **one persistent, visible Chrome instance shared by all MCP clients** — the "B+" model. All connected HTTP client sessions (opencode instances, scripts) reuse the *same* browser context, so cookies, logins and open tabs are visible to every client.
+
+`config/config.json` (shipped as `/defaults/config.json`, force-synced onto the PVC at boot by the runner):
+
+```json
+{
+    "browser": {
+        "isolated": false,
+        "userDataDir": "/config/mcp-profile",
+        "launchOptions": { "headless": false }
+    },
+    "sharedBrowserContext": true
+}
+```
+
+| Mechanism | Effect |
+|---|---|
+| `isolated: false` + `userDataDir` | Persistent profile on PVC (`/config/mcp-profile`) — logins and cookies survive browser and pod restarts |
+| `sharedBrowserContext: true` | All HTTP clients share ONE browser context — concurrent agents see the same tabs |
+| `headless: false` + `DISPLAY=:1` (runner) | Chrome renders on the KasmVNC display → visible in the web desktop for manual intervention (2FA, captchas) |
+
+**Why this works without lock contention** (the reason an earlier persistent-profile setup was reverted in commit `30662be`): Chromium's `SingletonLock` allows only ONE browser process per user-data-dir. Contended setups launch a browser per client session against the same profile and fail with *"Browser is already in use"*. Here the MCP server process owns the single browser; clients attach via HTTP, so exactly one Chrome process exists per profile. The desktop Chrome (autostart, manual logins) uses a separate profile (`/config/chrome-profile`).
+
+**Profile lock after unclean kills:** If a pod is killed abruptly, the `SingletonLock` file survives on the PVC and Chrome shows a modal *"profile appears to be in use … on another computer"* dialog that blocks every tool call. The runner removes stale locks on every start. If one appears at runtime: `pkill -9 -f "user-data-dir=/config/mcp-profile" && rm -f /config/mcp-profile/Singleton*`.
+
+**Idle behavior:** `--idle-timeout 3600000` closes the shared browser after 1 h without tool calls; the next call relaunches it from the persistent profile. Sessions do not survive idle-closes implicitly — set `--idle-timeout 0` to keep the browser open indefinitely.
+
+**Trade-off:** with a shared context there is no isolation between concurrent agents — two agents navigating simultaneously fight over the same tabs, and both see each other's session state. For isolated parallel testing use `--isolated` (ephemeral, invisible) instead.
+
 ## Configuration
 
 The MCP server configuration is located at `/config/config.json`:
 
 - **Port**: 3002
-- **Browser**: Chrome (non-headless)
+- **Browser**: Chrome, headed on the KasmVNC display (`headless: false`)
+- **Profile**: `/config/mcp-profile` (persistent, shared across all clients)
 - **Capabilities**: PDF and vision support
 - **Output Directory**: `/config/output`
 
@@ -123,7 +157,8 @@ When the container is running, you should see the following processes:
 When a browser session is initialized through the MCP server, Chrome processes appear:
 
 - **chrome** (abc/user): Main Chrome browser process
-  - Official: `--user-data-dir=/config/chrome-profile`
+  - MCP shared browser: `--user-data-dir=/config/mcp-profile`
+  - Desktop Chrome (autostart, manual logins): `--user-data-dir=/config/chrome-profile`
 - **chrome --type=gpu-process**: GPU rendering process
 - **chrome --type=renderer**: Page rendering processes (one per tab)
 - **chrome --type=zygote**: Process spawner
@@ -142,7 +177,7 @@ curl -s http://localhost:3002/sse
 docker exec chrome-mcp cat /config/output/playwright-mcp.log
 ```
 
-> **Note**: Chrome only appears in the process list after the first browser automation call through the MCP server. The browser persists across calls when using `sharedBrowserContext: true` in the config.
+> **Note**: Chrome only appears in the process list after the first browser automation call through the MCP server. The shared browser persists across calls and idle-closes after 1 h (see [Browser Session Model](#browser-session-model)).
 
 ## Development
 

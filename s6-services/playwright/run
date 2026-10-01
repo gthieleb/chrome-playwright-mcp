@@ -38,7 +38,16 @@ echo "Starting Playwright MCP (official @playwright/mcp)"
 # Allow-list note: stock 0.0.81+ rejects requests whose Host header differs from
 # the bind address ("Access is only allowed at localhost"). This container is only
 # reachable via Tailscale service ingress, so the check is disabled deliberately.
-exec s6-setuidgid abc env HOME=/home/kasm-user /usr/bin/playwright-mcp \
+# DISPLAY is required for headed browser launches (KasmVNC X display :1); the
+# baseimage does not guarantee DISPLAY reaches s6 services, so set it explicitly.
+# SingletonLock note: Chromium allows only ONE browser process per user-data-dir.
+# After an unclean pod kill the lock file survives on the PVC and Chrome shows a
+# modal "profile in use by another computer" dialog that blocks every tool call.
+# Clean stale locks before start — safe: the previous instance is gone anyway.
+find /config/chrome-profile /config/mcp-profile \
+     \( -name 'SingletonLock' -o -name 'SingletonCookie' \) -exec rm -f {} + 2>/dev/null
+
+exec s6-setuidgid abc env DISPLAY=${DISPLAY:-:1} HOME=/home/kasm-user /usr/bin/playwright-mcp \
   --config /config/config.json \
   --output-dir /config/output \
   --idle-timeout 3600000 \

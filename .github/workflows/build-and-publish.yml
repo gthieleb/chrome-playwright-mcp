@@ -10,7 +10,10 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Deployed image name is ghcr.io/gthieleb/chrome-mcp (consumed by the
+  # mcp-setup Helmrelease). The repo was renamed, so github.repository would
+  # push to chrome-playwright-mcp and break the Flux OCIRepository reference.
+  IMAGE_NAME: gthieleb/chrome-mcp
 
 jobs:
   build-and-push:
