@@ -124,6 +124,8 @@ The container runs **one persistent, visible Chrome instance shared by all MCP c
 
 **Idle behavior:** `--idle-timeout 3600000` closes the shared browser after 1 h without tool calls; the next call relaunches it from the persistent profile. Sessions do not survive idle-closes implicitly — set `--idle-timeout 0` to keep the browser open indefinitely.
 
+**First call after a browser launch may hang.** Observed under host load (2-core node, load > 90): the first `browser_navigate` after a fresh Chrome launch can exceed the client timeout with zero bytes; the identical retry succeeds immediately. If a first call hangs, retry once before debugging further.
+
 **Trade-off:** with a shared context there is no isolation between concurrent agents — two agents navigating simultaneously fight over the same tabs, and both see each other's session state. For isolated parallel testing use `--isolated` (ephemeral, invisible) instead.
 
 ## Configuration
